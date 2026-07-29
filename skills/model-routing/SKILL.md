@@ -24,27 +24,33 @@ Use `xhigh` or `max` after `high` fails for a reasoning-related cause. GPT-5.5 s
 
 1. Split the request into independent work units. Record each unit's deliverable, risk if wrong, minimum context, and acceptance check. **Gate:** every proposed worker owns one bounded unit.
 2. Remove fan-out whose parallelism or isolation does not repay duplicated prompts and context. Keep small dependent work in the orchestrator. **Gate:** shared context serves distinct deliverables rather than duplicate attempts.
-3. Assign model and effort from the budget ladder. GPT-5.5 is the baseline for unmatched work. **Gate:** every unit has one route, and every high-risk route uses Sol or records reduced assurance.
+3. Assign model and effort from the budget ladder. GPT-5.5 is the baseline for unmatched work. Break ties downward; the orchestrator's current model is not a routing input. **Gate:** every unit has one route, and every high-risk route uses Sol or records reduced assurance.
 4. Before the first launch, run `pi --list-models gpt-5`. Route unavailable Luna or Terra work to GPT-5.5, unavailable GPT-5.5 work to Sol, and unavailable Sol work to `gpt-5.5:high` with reduced assurance. **Gate:** every selected model and effort is supported by the current catalog.
-5. Launch each independent unit in a fresh named `pi` session. Reuse that worker session for tightly related turns; start fresh when prior history is unrelated. **Gate:** each worker has a visible identity and one cohesive context.
-6. Give each worker only relevant paths, issue/spec references, acceptance criteria, and an output contract. Use a narrow tool allowlist. Preserve project context rules; when exactly one skill is required, load it with `--no-skills --skill <path>` and invoke it as `/skill:<name>`. **Gate:** every launch contains sufficient task context and excludes unrelated payload.
+5. Prepare each worker's bounded task before launch: relevant paths, issue/spec references, acceptance criteria, and an output contract. Use a narrow tool allowlist. For a read-only worker, prefer `--tools read,grep,find,ls`; add `edit`, `write`, or `bash` only when required. Preserve project context rules; when exactly one skill is required, load it with `--no-skills --skill <path>` and invoke it as `/skill:<name>`. Ask report-only workers for exactly: findings, evidence, recommendation. **Gate:** every task contains sufficient context and excludes unrelated payload.
+6. Apply the route at **process creation**. Launch every worker in a fresh, named `pi` session with explicit `--provider`, `--model`, and `--thinking` flags matching its routing record. A bare `pi` process inherits a default route; loading this skill or sending the task afterward can route descendants, not the running worker. Reuse that routed session for tightly related turns; start fresh when prior history is unrelated. **Gate:** before task execution, every running worker has a visible identity and its exact launch command matches the recorded model and effort.
+
+   Direct launch:
+
+   ```bash
+   pi --provider openai-codex \
+     --model <model-id> \
+     --thinking <level> \
+     --tools <minimum-required-tools> \
+     --name "<short worker label>" \
+     "<bounded task or /skill:name invocation>"
+   ```
+
+   Herdr launch, before sending the task to the pane:
+
+   ```bash
+   herdr pane run "$pane" \
+     "pi --provider openai-codex --model <model-id> --thinking <level> --tools <minimum-required-tools> --name '<short worker label>'"
+   ```
+
 7. Validate material risk once: GPT-5.5 for ordinary validation, Sol for security, architecture, legal, or compatibility-sensitive validation. A Luna result that can affect code, external claims, or business decisions requires validation. Seek duplicate opinions when independent adjudication is the deliverable. **Gate:** each material low-tier result has one named validation path.
 8. Synthesize once against repository evidence and acceptance criteria. For repeated routes, inspect the footer or `/session` totals (`↑`, `↓`, `R`, `W`, `CH`, context %) and move future work down the ladder when quality holds. **Gate:** acceptance is resolved and representative routes have evidence for the next calibration.
 
-Routing is complete when every worker has a model, effort, bounded context, and acceptance check; duplicated context has been removed; and every material low-tier result has a validation path.
-
-## Lean launch
-
-```bash
-pi --provider openai-codex \
-  --model <model-id> \
-  --thinking <level> \
-  --tools <minimum-required-tools> \
-  --name "<short worker label>" \
-  "<bounded task or /skill:name invocation>"
-```
-
-For a read-only worker, prefer `--tools read,grep,find,ls`. Add `edit`, `write`, or `bash` when its deliverable requires them. Ask report-only workers for exactly: findings, evidence, recommendation.
+Routing is complete when every launched process matches its recorded model and effort; every worker has bounded context and an acceptance check; duplicated context has been removed; and every material low-tier result has a validation path.
 
 Keep the routing record compact:
 
