@@ -12,7 +12,7 @@ Use this skill as the **orquestrator**: a control loop that keeps work moving un
 
 1. Verify the session is Herdr-managed, then read the installed Herdr CLI help needed for this run. Follow the `herdr` skill for exact commands, IDs, and safe pane control. **Completion:** `HERDR_ENV=1`, and the current agent/pane and workspace are known.
 2. Name the current Herdr agent `orquestrator` with `herdr agent rename`, targeting the caller's pane or current agent explicitly. **Completion:** `herdr agent get orquestrator` identifies this coordinator.
-3. Split a background sibling pane, preserving `$PWD` and using `--no-focus`. Start a fresh Pi agent named `matt` there on `gpt-5.6-terra`, then submit exactly this shape of prompt:
+3. Split a background sibling pane, preserving `$PWD` and using `--no-focus`. Start a fresh Pi agent named `matt` there with `--model openai-codex/gpt-5.6-terra`, then submit exactly this shape of prompt:
 
    ```text
    /skill:ask-matt <concise question about the next action>
@@ -24,7 +24,7 @@ Use this skill as the **orquestrator**: a control loop that keeps work moving un
 
 4. Turn Matt's recommendation into bounded units and dependencies. For each unit, capture its deliverable, acceptance check, stop condition, and whether it is independent, sequential, or HITL. Keep Matt's examples literal unless repository evidence requires adaptation. **Completion:** every planned unit has an owner condition and an acceptance check.
 5. Invoke the installed model-router skill *before creating worker tabs or Pi sessions* (in this repository, `/skill:model-routing`). Route every worker through it, including model and thinking level. Exclude `gpt-5.6-sol`: choose the cheapest adequate non-Sol route, escalating from evidence rather than defaulting to Sol. **Completion:** every dispatchable unit has a non-Sol route and no worker topology has been created yet.
-6. For each now-eligible unit, create a background Herdr tab with a clear label, start a fresh named Pi session using its routed model, and give it only its bounded prompt. **Completion:** each active unit has one named tab, one fresh named Pi agent, and its routed launch command.
+6. For each now-eligible unit, create a background Herdr tab with a clear label, start a fresh named Pi session using its fully qualified routed model (`openai-codex/<model>`), and give it only its bounded prompt. **Completion:** each active unit has one named tab, one fresh named Pi agent, and its routed launch command.
 
 When Matt recommends a skill, make that worker's task begin with:
 
