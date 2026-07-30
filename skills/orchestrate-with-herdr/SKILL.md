@@ -45,7 +45,8 @@ At each checkpoint:
 3. When a completed unit unlocks a dependency, route that newly eligible unit first, then create its tab and fresh Pi session.
 4. When an agent is blocked, inspect its transcript. Resolve ordinary, reversible orchestration questions from Matt's plan and repository evidence; for a HITL approval, choice, credential, or user-owned action, preserve the task and ask the user for that exact decision. Never approve or perform the HITL action on the user's behalf.
 5. On a failed acceptance check, give the same worker a concise evidence-based correction when it remains within its stop condition; otherwise preserve its handoff and route a fresh replacement worker.
-6. Repeat until all units have acceptance evidence, a preserved handoff is required, or a genuine HITL decision blocks progress.
+6. Once a worker's result, acceptance evidence, and any needed handoff are captured, close the Herdr tab or pane created for it. Close Matt's pane after its recommendation is captured unless a later follow-up is planned. Keep the `orquestrator` session, active workers, retry candidates, and HITL-blocked work open. Close only topology created by this orchestration run.
+7. Repeat until all units have acceptance evidence, a preserved handoff is required, or a genuine HITL decision blocks progress.
 
 If the user is AFK, remain in this loop. Do not send interim progress updates or return control merely because a worker settles; return only for a genuine HITL decision or the final result.
 
