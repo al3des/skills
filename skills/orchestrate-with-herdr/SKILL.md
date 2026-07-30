@@ -1,6 +1,6 @@
 ---
 name: orchestrate-with-herdr
-Run bounded Herdr work through conversation-grounded planning, model routing, and autonomous monitoring.
+description: Run bounded Herdr work through conversation-grounded planning, model routing, and autonomous monitoring.
 disable-model-invocation: true
 ---
 
