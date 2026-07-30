@@ -1,12 +1,12 @@
 ---
 name: orchestrate-with-herdr
-description: Run bounded Herdr work through conversation-grounded planning, model routing, and autonomous monitoring.
+description: Orchestrate conversation-specified Wayfinder and Implement tickets in Herdr.
 disable-model-invocation: true
 ---
 
 # Orchestrate with Herdr
 
-Use this skill as the **orchestrator**: a control loop for bounded work in named Herdr tabs.
+Use this skill as the **orchestrator**: a control loop for conversation-specified tickets in named Herdr tabs.
 
 ## Establish control
 
@@ -14,18 +14,16 @@ Use this skill as the **orchestrator**: a control loop for bounded work in named
 2. Name the current Herdr agent `orchestrator` with `herdr agent rename`, targeting the caller's pane or current agent explicitly. **Completion:** `herdr agent get orchestrator` identifies this coordinator.
 ## Plan before dispatch
 
-3. Derive the goal, constraints, and acceptance criteria from the conversation history. Inspect the relevant map, specification, tracker, and repository evidence needed to resolve the plan. For missing product intent, preserve the affected work and ask the user the exact decision. **Completion:** the coordinator has a goal, constraints, acceptance criteria, and either a resolved plan or a precise HITL question.
-4. Turn the resolved plan into bounded units and dependencies. Record each unit's owner, deliverable, dependencies, acceptance check, stop condition, and classification: independent, sequential, or HITL. **Completion:** every planned unit has all recorded fields and an acceptance check.
-5. Before creating worker tabs or Pi sessions, invoke `/skill:model-routing` for every dispatchable unit. Capture its compact routing record, including model and thinking level; choose the cheapest adequate non-Sol route and escalate from evidence. **Completion:** every dispatchable unit has a recorded non-Sol route, and no worker topology exists.
-6. For each eligible unit, create a background Herdr tab with a clear label, start a fresh named Pi session using the routed provider, model, thinking level, and tools, and give it its bounded prompt. **Completion:** each active unit has one named tab, one fresh named Pi agent, and a launch command matching its routing record.
-
-When a unit requires an installed skill, begin the worker's task with:
+3. Read the conversation history for a **supported ticket directive**: an association between `wayfinder` or `implement` and one ticket URL, with any stated dependency or parallelism. When history supplies no supported ticket directive, report that it lacks a supported ticket workflow, suggest `/ask-matt`, and stop. **Completion:** either at least one supported ticket directive is identified, or the user has the exact suggested next action.
+4. Turn every supported ticket directive into a bounded unit. Record its skill, ticket URL, dependencies, state, acceptance evidence, and stop condition. Place every other handoff in an out-of-scope record; it remains undispatched. **Completion:** every conversation-specified handoff is accounted for as either a supported unit or out-of-scope work.
+5. Before creating worker tabs or Pi sessions, invoke `/skill:model-routing` for every eligible supported unit. Capture its compact routing record, including model and thinking level; choose the cheapest adequate non-Sol route and escalate from evidence. **Completion:** every eligible supported unit has a recorded non-Sol route, and no worker topology exists.
+6. For each eligible unit, create a background Herdr tab with a clear label and start a fresh named Pi session using the routed provider, model, thinking level, and tools. Send exactly one task prompt:
 
 ```text
-/skill:<skill-name> <bounded unit>
+/skill:<wayfinder|implement> <ticket-url>
 ```
 
-Append only the paths, acceptance check, or blocker needed to execute that unit.
+**Completion:** each active unit has one named tab, one fresh named Pi agent, a launch command matching its routing record, and the exact skill-and-ticket prompt.
 
 ## Monitor to the goal
 
@@ -36,13 +34,11 @@ At each checkpoint:
 1. Inspect active named agents with Herdr. Prefer lifecycle-aware `agent wait`, `agent get`, and `agent read` over blind sleeps or a polling script.
 2. For a settled agent, read its result and verify its acceptance evidence. Mark it complete only when that evidence is present.
 3. When a completed unit unlocks a dependency, route that newly eligible unit first, then create its tab and fresh Pi session.
-4. When an agent is blocked, inspect its transcript. Resolve ordinary, reversible orchestration questions from the plan and repository evidence. For a HITL approval, choice, credential, or user-owned action, keep the task preserved and ask the user for the exact decision; the user retains that action.
+4. When an agent is blocked, inspect its transcript. Resolve ordinary, reversible orchestration questions from the supported directive and repository evidence. For a HITL approval, choice, credential, or user-owned action, keep the task preserved and ask the user for the exact decision; the user retains that action.
 5. On a failed acceptance check, give the same worker a concise evidence-based correction within its stop condition. Outside that condition, preserve its handoff and route a fresh replacement worker.
 6. Once a worker's result, acceptance evidence, and needed handoff are captured, close the Herdr tab or pane created for it. Retain the `orchestrator` session, active workers, retry candidates, and HITL-blocked work. **Completion:** completed topology is closed, while active or blocked work remains available.
-7. Repeat the checkpoint until every unit has acceptance evidence, a preserved handoff is required, or a genuine HITL decision blocks progress. **Completion:** the dependency record accounts for every planned unit.
+7. Repeat the checkpoint until every supported unit has acceptance evidence, a preserved handoff is required, or a genuine HITL decision blocks progress. **Completion:** the dependency record accounts for every supported unit.
 
-If the user is AFK, continue the monitoring loop. Return with the precise HITL decision when one is needed; otherwise return the final evidence after the loop completes.
+If the user is AFK, continue the monitoring loop. Return with the precise HITL decision when one is needed; otherwise return the final evidence and the out-of-scope record after the loop completes.
 
-For sequential and parallel patterns, read [`references/orchestration-patterns.md`](references/orchestration-patterns.md) when the plan includes those dependencies.
-
-Orchestration is complete only when the stated goal has acceptance evidence, a preserved handoff is required, or the user has received the exact remaining HITL decision with the affected work preserved.
+Orchestration is complete when every supported unit has acceptance evidence, a preserved handoff is required, or the user has received the exact remaining HITL decision with the affected work preserved.
