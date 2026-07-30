@@ -18,7 +18,7 @@ Use this skill as the **orquestrator**: a control loop that keeps work moving un
    /skill:ask-matt <concise question about the next action>
    ```
 
-   State only the goal and the minimum decision-relevant context. Wait for the answer and read it before planning. **Completion:** Matt has recommended the next action, including a literal example when one is useful.
+   Tell Matt to inspect the actual source of truth before recommending anything: read the relevant map or specification and inspect the open issues. Give only the paths, tracker, goal, and minimum decision-relevant context needed to begin that legwork; do not substitute a summary for the artifacts. Wait for the answer and read it before planning. **Completion:** Matt has inspected the map/specification and open issues, then recommended the next action, including a literal example when one is useful.
 
 ## Plan before dispatch
 
