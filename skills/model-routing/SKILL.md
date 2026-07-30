@@ -1,39 +1,53 @@
 ---
 name: model-routing
-description: Route orchestrated work across OpenAI Codex GPT models and thinking levels. Use when splitting work among agents, spawning pi workers, choosing models or reasoning effort, or reducing context and token use in a multi-agent run; other orchestration skills should consult this before launching workers.
+description: Route bounded orchestration work to the cheapest adequate Codex model. Use when decomposing agent work, choosing a model or thinking level, launching Pi workers, or deciding whether to escalate, stop, or hand off; other orchestration skills should consult it before launching workers.
 ---
 
 # Model routing
 
-Climb a **budget ladder**: choose the cheapest adequate model and lowest explicit effort, then escalate only when evidence warrants it. Risk overrides surface simplicity.
+Use a **bounded** unit: one deliverable, the minimum required context, an observable acceptance check, and a stop condition. Decompose before routing; escalate only from concrete failure evidence.
 
-## Assign the worker
+## Route the unit
 
-| Model | Route here | Starting effort |
+Use this table as the single source of truth:
+
+| Model | Best-fit work | Starting effort |
 |---|---|---|
-| `gpt-5.6-luna` | Bounded extraction, classification, summaries, support triage, mechanical low-risk checks | `low` |
-| `gpt-5.6-terra` | Documentation, structured writing, product copy, content planning | `low`; `medium` for multi-source synthesis |
-| `gpt-5.5` | Default general coding, routine review, coordination, workload planning, mixed everyday work | `low` for mechanical changes; otherwise `medium` |
-| `gpt-5.6-sol` | Hard debugging, security, architecture, difficult reasoning, compatibility-sensitive code, legal or business risk review | `medium`; `high` when ambiguous or high-risk |
+| `gpt-5.6-luna` | Bounded extraction, classification, summaries, mechanical checks, and low-risk scripted edits | `low` |
+| `gpt-5.6-terra` | Documentation, structured writing, product copy, and content synthesis | `low`; `medium` for multi-source synthesis |
+| `gpt-5.4-mini` | Narrow low-risk implementation, focused test fixes, scaffolding, and mechanical refactors with clear acceptance commands | `low`; `medium` when several files interact |
+| `gpt-5.5` | Default implementation worker for coding, tests, prototypes, routine debugging/review, and compatibility tooling | `low` for mechanical work; otherwise `medium`; `high` after a reasoning failure |
+| `gpt-5.6-sol` | Control-plane work, architecture/security/legal adjudication, and bounded high-risk final review | `medium`; `high` when ambiguity warrants it |
 
-For these Codex models, Pi maps `minimal` to provider effort `low`; standardize on `low`. Thinking `off` merely omits an explicit reasoning setting, so `low` is the lowest predictable route. Numeric `thinkingBudgets` apply to budget-based adapters, while Codex effort is controlled with `--thinking`.
+Implementation work starts on Mini when narrow and low-risk, otherwise GPT-5.5. Sol is reserved for coordination and bounded adjudication; a write-capable Sol exception needs explicit user direction or evidence that `gpt-5.5:high` failed for a reasoning-related cause and the unit cannot be decomposed further; record the reason in the routing line. Compatibility-sensitive implementation starts on GPT-5.5, with a separate Sol review when risk warrants it.
 
-Use `xhigh` or `max` after `high` fails for a reasoning-related cause. GPT-5.5 supports through `xhigh`; Luna, Terra, and Sol also support `max`. When an output misses acceptance criteria, raise one effort rung if the model still fits the workload; switch models when capability or risk was misrouted.
+For Codex models, use explicit `--thinking low|medium|high`. `low` is the lowest predictable explicit tier for the listed catalog. Raise one effort rung after a concrete miss; switch models when capability or risk was misrouted. Verify the catalog before the first launch:
 
-## Orchestrate
+```bash
+pi --list-models gpt-5
+```
 
-1. Split the request into independent work units. Record each unit's deliverable, risk if wrong, minimum context, and acceptance check. **Gate:** every proposed worker owns one bounded unit.
-2. Remove fan-out whose parallelism or isolation does not repay duplicated prompts and context. Keep small dependent work in the orchestrator. **Gate:** shared context serves distinct deliverables rather than duplicate attempts.
-3. Assign model and effort from the budget ladder. GPT-5.5 is the baseline for unmatched work. **Gate:** every unit has one route, and every high-risk route uses Sol or records reduced assurance.
-4. Before the first launch, run `pi --list-models gpt-5`. Route unavailable Luna or Terra work to GPT-5.5, unavailable GPT-5.5 work to Sol, and unavailable Sol work to `gpt-5.5:high` with reduced assurance. **Gate:** every selected model and effort is supported by the current catalog.
-5. Launch each independent unit in a fresh named `pi` session. Reuse that worker session for tightly related turns; start fresh when prior history is unrelated. **Gate:** each worker has a visible identity and one cohesive context.
-6. Give each worker only relevant paths, issue/spec references, acceptance criteria, and an output contract. Use a narrow tool allowlist. Preserve project context rules; when exactly one skill is required, load it with `--no-skills --skill <path>` and invoke it as `/skill:<name>`. **Gate:** every launch contains sufficient task context and excludes unrelated payload.
-7. Validate material risk once: GPT-5.5 for ordinary validation, Sol for security, architecture, legal, or compatibility-sensitive validation. A Luna result that can affect code, external claims, or business decisions requires validation. Seek duplicate opinions when independent adjudication is the deliverable. **Gate:** each material low-tier result has one named validation path.
-8. Synthesize once against repository evidence and acceptance criteria. For repeated routes, inspect the footer or `/session` totals (`↑`, `↓`, `R`, `W`, `CH`, context %) and move future work down the ladder when quality holds. **Gate:** acceptance is resolved and representative routes have evidence for the next calibration.
+Route unavailable Luna, Terra, or Mini work to GPT-5.5 when adequate. Route unavailable GPT-5.5 work to GPT-5.4 Mini when adequate; otherwise stop and request rerouting rather than selecting a write-capable Sol worker by default.
 
-Routing is complete when every worker has a model, effort, bounded context, and acceptance check; duplicated context has been removed; and every material low-tier result has a validation path.
+## Bound the worker
 
-## Lean launch
+Before launch, define all of these in the worker prompt or routing record:
+
+- one deliverable;
+- minimum paths, issues, and spec sections;
+- acceptance command or observable artifact;
+- expected duration and context budget;
+- assigned tools and explicit scope boundaries;
+- stop condition and handoff output.
+
+For segmented implementation, target **under 80k active context / roughly 30% of a 272k window**. At **120k active context or 45%, whichever comes first**, preserve the worktree, write a concise handoff, and start a fresh worker for the remaining unit. Handoff earlier when investigation repeats, scope expands, unrelated coordination begins, or twice the expected duration passes without approaching acceptance. Compaction is a signal to hand off, not a way to extend an oversized unit.
+
+## Execute and validate
+
+1. Split the request into units, each with one deliverable, risk, minimum context, acceptance check, budget, and handoff. Shared-worktree units run serially; independent read-only analysis may run in parallel. **Completion:** every unit has an owner, route, budget, and acceptance check.
+2. Keep tiny dependent work in the coordinator and remove fan-out whose duplicated context costs more than its parallelism saves. **Completion:** each dispatched worker has a distinct payoff and no unnecessary dependency.
+3. Prepare a narrow prompt and minimum tool set. Give read-only workers read/search tools where possible; assign orchestration or tracker work only to a worker whose single deliverable is that work. **Completion:** the prompt names the deliverable, boundaries, tools, and handoff.
+4. Launch a fresh named Pi process with explicit provider, model, thinking level, tools, and task flags. **Completion:** the process is named and its launch command records the selected route.
 
 ```bash
 pi --provider openai-codex \
@@ -44,12 +58,18 @@ pi --provider openai-codex \
   "<bounded task or /skill:name invocation>"
 ```
 
-For a read-only worker, prefer `--tools read,grep,find,ls`. Add `edit`, `write`, or `bash` when its deliverable requires them. Ask report-only workers for exactly: findings, evidence, recommendation.
+5. Monitor the budget using the footer/session totals and transcript at checkpoints. Interrupt before the hard context ceiling and hand off when a stop condition fires. **Completion:** the worker either reaches acceptance or leaves a concise handoff with preserved worktree state.
+6. Validate material risk once in a separate bounded pass. Use GPT-5.5 for ordinary code; use Sol for security, architecture, legal, or difficult compatibility adjudication. Give the validator the diff, acceptance criteria, and evidence rather than the implementation transcript. **Completion:** validation records pass/fail findings and unresolved risk.
+7. Synthesize worker reports against repository evidence. **Completion:** the coordinator records the final result, acceptance evidence, and any handoff or unresolved risk.
+
+For long compatibility work, use separate bounded phases: template adaptation, automated validation, consumer rendering, and verdict. A single worker owns only the phase assigned to it.
 
 Keep the routing record compact:
 
 ```text
-worker | deliverable | risk | model:effort | validation
+worker | deliverable | risk | model:effort | context/time budget | validation
 ```
 
-When Pi or the model catalog changes, recalibrate this policy against [`references/pi-thinking-efficiency-research.md`](references/pi-thinking-efficiency-research.md) and the current installed Pi docs/source, replacing stale rules in place.
+Routing is complete when every unit has a route, one owner, explicit boundaries and stop conditions, a named process where dispatched, acceptance evidence, and (for material risk) a separate validation result.
+
+When Pi or the model catalog changes, recalibrate against [`references/pi-thinking-efficiency-research.md`](references/pi-thinking-efficiency-research.md) and current Pi docs/source, replacing stale rules in place.
